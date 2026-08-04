@@ -6,9 +6,13 @@ function Footer() {
     <footer className="mt-16 bg-red-900 text-yellow-50">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-3">
         <div>
-          <h3 className="mb-3 font-serif text-2xl text-yellow-400">
-            {CONTACT.storeName}
-          </h3>
+          <div className="mb-4 inline-flex rounded-lg bg-white p-3 shadow-md">
+            <img
+              src="/logo-ideal.jpeg"
+              alt={CONTACT.storeName}
+              className="h-16 w-auto object-contain"
+            />
+          </div>
           <p className="text-sm text-yellow-100/80 leading-relaxed">
             Pães, doces e salgados feitos com carinho todos os dias.
           </p>

@@ -22,8 +22,16 @@ function NavBar() {
   return (
     <section className="sticky top-0 z-40 w-full bg-red-800 shadow-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/" className="font-serif text-2xl text-yellow-500">
-          Panificação Ideal
+        <Link
+          to="/"
+          className="flex items-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-yellow-500/40 transition-transform hover:scale-105"
+          aria-label="Panificação Ideal - Página inicial"
+        >
+          <img
+            src="/logo-ideal.jpeg"
+            alt="Panificação Ideal"
+            className="h-12 w-auto object-contain sm:h-14"
+          />
         </Link>
 
         <div className="relative" ref={menuRef}>
