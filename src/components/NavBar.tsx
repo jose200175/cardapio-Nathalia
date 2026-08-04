@@ -24,13 +24,13 @@ function NavBar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link
           to="/"
-          className="flex items-center rounded-lg bg-white px-3 py-1.5 shadow-md ring-1 ring-yellow-500/40 transition-transform hover:scale-105"
+          className="flex items-center transition-transform hover:scale-105"
           aria-label="Panificação Ideal - Página inicial"
         >
           <img
-            src="/logo-ideal.jpeg"
+            src="/logo-ideal.png"
             alt="Panificação Ideal"
-            className="h-12 w-auto object-contain sm:h-14"
+            className="h-14 w-auto object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.55)] sm:h-16"
           />
         </Link>
 

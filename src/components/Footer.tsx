@@ -6,13 +6,11 @@ function Footer() {
     <footer className="mt-16 bg-red-900 text-yellow-50">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-3">
         <div>
-          <div className="mb-4 inline-flex rounded-lg bg-white p-3 shadow-md">
-            <img
-              src="/logo-ideal.jpeg"
-              alt={CONTACT.storeName}
-              className="h-16 w-auto object-contain"
-            />
-          </div>
+          <img
+            src="/logo-ideal.png"
+            alt={CONTACT.storeName}
+            className="mb-4 h-20 w-auto object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)]"
+          />
           <p className="text-sm text-yellow-100/80 leading-relaxed">
             Pães, doces e salgados feitos com carinho todos os dias.
           </p>
