@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, ShieldCheck } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CATEGORIES } from "../data/menu";
 import { slugify } from "./CategorySection";
@@ -48,16 +48,6 @@ function NavBar() {
                   </a>
                 </li>
               ))}
-              <li>
-                <Link
-                  to="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex w-full items-center gap-2 px-4 py-3 text-left font-medium text-red-800 transition-colors hover:bg-red-50"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Administração
-                </Link>
-              </li>
             </ul>
           )}
         </div>

@@ -8,6 +8,7 @@ import {
   type Product,
 } from "../data/menu";
 import { useMenu } from "../context/MenuContext";
+import AdminGate from "../components/AdminGate";
 
 interface FormState {
   name: string;
@@ -25,7 +26,7 @@ const emptyForm: FormState = {
   category: CATEGORIES[0],
 };
 
-function Admin() {
+function AdminContent() {
   const { products, addProduct, updateProduct, removeProduct } = useMenu();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -243,6 +244,14 @@ function Admin() {
         </div>
       </main>
     </div>
+  );
+}
+
+function Admin() {
+  return (
+    <AdminGate>
+      <AdminContent />
+    </AdminGate>
   );
 }
 
