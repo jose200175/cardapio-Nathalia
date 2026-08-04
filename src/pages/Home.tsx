@@ -13,7 +13,7 @@ function Home() {
       <NavBar />
 
       <header className="bg-red-800 pb-10 pt-4 text-center">
-        <p className="mx-auto max-w-2xl px-6 font-serif text-lg font-bold text-yellow-100 text-balance">
+        <p className="mx-auto max-w-md px-6 font-serif text-sm font-bold text-yellow-100 text-balance sm:max-w-2xl sm:text-lg">
           AQUI, CADA PÃO, CADA DOCE E CADA REFEIÇÃO TEM MÃOS, DEDICAÇÃO E
           HISTÓRIA.
         </p>
