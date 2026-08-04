@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, Wheat } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CATEGORIES } from "../data/menu";
 import { slugify } from "./CategorySection";
@@ -24,21 +24,13 @@ function NavBar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link
           to="/"
-          className="group relative flex items-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-100 px-4 py-2 shadow-lg ring-1 ring-yellow-600/30 transition-transform hover:scale-105"
+          className="flex items-center transition-transform hover:scale-105"
           aria-label="Panificação Ideal - Página inicial"
         >
-          <Wheat
-            className="pointer-events-none absolute -right-3 -bottom-3 h-20 w-20 rotate-12 text-yellow-500/25"
-            aria-hidden="true"
-          />
-          <Wheat
-            className="pointer-events-none absolute -left-4 -top-4 h-16 w-16 -rotate-12 text-yellow-500/20"
-            aria-hidden="true"
-          />
           <img
             src="/logo-ideal.png"
             alt="Panificação Ideal"
-            className="relative z-10 h-14 w-auto object-contain sm:h-16"
+            className="h-16 w-auto object-contain sm:h-20"
           />
         </Link>
 

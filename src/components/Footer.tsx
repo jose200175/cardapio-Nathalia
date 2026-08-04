@@ -1,4 +1,4 @@
-import { Phone, MapPin, Clock, Wheat } from "lucide-react";
+import { Phone, MapPin, Clock } from "lucide-react";
 import { CONTACT } from "../data/contact";
 
 function Footer() {
@@ -6,21 +6,11 @@ function Footer() {
     <footer className="mt-16 bg-red-900 text-yellow-50">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-3">
         <div>
-          <div className="relative mb-4 inline-flex items-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-100 px-4 py-3 shadow-lg ring-1 ring-yellow-600/30">
-            <Wheat
-              className="pointer-events-none absolute -right-3 -bottom-3 h-20 w-20 rotate-12 text-yellow-500/25"
-              aria-hidden="true"
-            />
-            <Wheat
-              className="pointer-events-none absolute -left-4 -top-4 h-16 w-16 -rotate-12 text-yellow-500/20"
-              aria-hidden="true"
-            />
-            <img
-              src="/logo-ideal.png"
-              alt={CONTACT.storeName}
-              className="relative z-10 h-20 w-auto object-contain"
-            />
-          </div>
+          <img
+            src="/logo-ideal.png"
+            alt={CONTACT.storeName}
+            className="mb-4 h-24 w-auto object-contain"
+          />
           <p className="text-sm text-yellow-100/80 leading-relaxed">
             Pães, doces e salgados feitos com carinho todos os dias.
           </p>
