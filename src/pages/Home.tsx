@@ -13,8 +13,12 @@ function Home() {
       <NavBar />
 
       <header className="bg-red-800 pb-10 pt-4 text-center">
-        <p className="mx-auto max-w-xl px-6 font-serif text-lg text-yellow-100">
-          Nosso cardápio de delícias fresquinhas, feitas todos os dias.
+        <p className="mx-auto max-w-2xl px-6 font-serif text-lg font-bold text-yellow-100 text-balance">
+          AQUI, CADA PÃO, CADA DOCE E CADA REFEIÇÃO TEM MÃOS, DEDICAÇÃO E
+          HISTÓRIA.
+        </p>
+        <p className="mx-auto mt-3 max-w-2xl px-6 font-serif text-base text-yellow-100/90 text-pretty">
+          Tudo é preparado diariamente pela nossa equipe:
         </p>
       </header>
 

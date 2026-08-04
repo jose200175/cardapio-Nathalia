@@ -30,7 +30,7 @@ function NavBar() {
           <img
             src="/logo-ideal.png"
             alt="Panificação Ideal"
-            className="h-16 w-auto object-contain sm:h-20"
+            className="h-20 w-auto object-contain sm:h-24"
           />
         </Link>
 
