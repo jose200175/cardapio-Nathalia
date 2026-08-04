@@ -2,12 +2,12 @@
 // Ajuste estes valores com os dados reais.
 export const CONTACT = {
   storeName: "Panificação Ideal",
-  phoneDisplay: "(11) 3333-4444",
+  phoneDisplay: "(79) 9 9628-2836",
   // Numero para o WhatsApp no formato internacional, apenas digitos.
-  whatsappNumber: "5511999999999",
+  whatsappNumber: "5579996282836",
   whatsappMessage: "Olá! Gostaria de fazer um pedido.",
-  address: "Rua das Delícias, 123 - Centro",
-  hours: "Seg a Sáb: 6h às 20h | Dom: 6h às 13h",
+  address: "Av. Franklin de Campos Sobral, 1779, Grageru",
+  hours: "Seg a Sáb: 6h às 20h | Dom: 7h às 12h",
 };
 
 export function whatsappLink(): string {
