@@ -9,11 +9,8 @@ function Footer() {
           <img
             src="/logo-ideal.png"
             alt={CONTACT.storeName}
-            className="mb-4 h-24 w-auto object-contain"
+            className="h-24 w-auto object-contain"
           />
-          <p className="text-sm text-yellow-100/80 leading-relaxed">
-            Pães, doces e salgados feitos com carinho todos os dias.
-          </p>
         </div>
 
         <div>
