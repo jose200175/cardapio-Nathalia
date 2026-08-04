@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Pencil, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, X, Upload } from "lucide-react";
 import {
   CATEGORIES,
   formatPrice,
@@ -26,10 +26,60 @@ const emptyForm: FormState = {
   category: CATEGORIES[0],
 };
 
+// Redimensiona e comprime a imagem para não estourar o armazenamento do navegador
+function resizeImage(file: File, maxSize = 600): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const width = Math.round(img.width * scale);
+        const height = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Não foi possível processar a imagem."));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => reject(new Error("Falha ao ler o arquivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function AdminContent() {
   const { products, addProduct, updateProduct, removeProduct } = useMenu();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Selecione um arquivo de imagem.");
+      return;
+    }
+    try {
+      const dataUrl = await resizeImage(file);
+      setForm((prev) => ({ ...prev, image: dataUrl }));
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : "Erro ao carregar a imagem.",
+      );
+    } finally {
+      event.target.value = "";
+    }
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -148,13 +198,50 @@ function AdminContent() {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-neutral-700">
-                URL da imagem
+                Foto do produto
               </label>
+              <div className="flex items-start gap-3">
+                {form.image ? (
+                  <img
+                    src={form.image || "/placeholder.svg"}
+                    alt="Pré-visualização"
+                    className="h-16 w-16 flex-shrink-0 rounded-lg border border-neutral-200 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 text-neutral-400">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100">
+                    <Upload className="h-4 w-4" />
+                    {form.image ? "Trocar foto" : "Enviar foto"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handleFile}
+                    />
+                  </label>
+                  {form.image && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, image: "" })}
+                      className="w-fit text-xs text-red-600 hover:underline"
+                    >
+                      Remover foto
+                    </button>
+                  )}
+                </div>
+              </div>
+              {uploadError && (
+                <p className="mt-1 text-xs text-red-600">{uploadError}</p>
+              )}
               <input
-                className={inputClass}
-                value={form.image}
+                className={`${inputClass} mt-2`}
+                value={form.image.startsWith("data:") ? "" : form.image}
                 onChange={(e) => setForm({ ...form, image: e.target.value })}
-                placeholder="https://..."
+                placeholder="Ou cole um link direto da imagem (https://...)"
               />
             </div>
 
