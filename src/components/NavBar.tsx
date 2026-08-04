@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CATEGORIES } from "../data/menu";
+import { slugify } from "./CategorySection";
 
 function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,70 +20,34 @@ function NavBar() {
   }, []);
 
   return (
-    <section className="w-screen bg-red-800">
-      {/* Topo da Navbar: Alinhamento horizontal com espaço para o botão */}
-      <div className="flex items-center justify-around px-6 py-4 max-w-6xl mx-auto">
-        <h1 className="text-yellow-500 text-2xl font-serif">
+    <section className="sticky top-0 z-40 w-full bg-red-800 shadow-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <Link to="/" className="font-serif text-2xl text-yellow-500">
           Panificação Ideal
-        </h1>
+        </Link>
 
-        {/* Container do Botão Dropdown Principal */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex items-center gap-2 bg-red-950 text-white px-4 py-2 rounded-md border border-red-700 hover:bg-yellow-500 hover:text-red-950 transition-all font-medium shadow-md"
+            className="flex items-center gap-2 rounded-md border border-red-700 bg-red-950 px-4 py-2 font-medium text-white shadow-md transition-all hover:bg-yellow-500 hover:text-red-950"
             aria-label="Abrir menu de navegação"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="h-5 w-5" />
           </button>
 
-          {/* Menu Suspenso (Dropdown) com todas as opções */}
           {isMenuOpen && (
-            <ul className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-md shadow-2xl z-50 py-1 text-gray-800 animate-in fade-in zoom-in-95 duration-100">
-              <li>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    alert("Navegando para Menu");
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-800 font-medium transition-colors border-b border-gray-100"
-                >
-                  Menu
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    alert("Navegando para Produtos");
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-800 font-medium transition-colors border-b border-gray-100"
-                >
-                  Produtos
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    alert("Navegando para Eventos");
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-800 font-medium transition-colors border-b border-gray-100"
-                >
-                  Eventos
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    alert("Navegando para Contato");
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-800 font-medium transition-colors"
-                >
-                  Contato
-                </button>
-              </li>
+            <ul className="animate-in fade-in zoom-in-95 absolute right-0 z-50 mt-2 w-52 rounded-md border border-gray-200 bg-white py-1 text-gray-800 shadow-2xl duration-100">
+              {CATEGORIES.map((category) => (
+                <li key={category}>
+                  <a
+                    href={`#${slugify(category)}`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block w-full border-b border-gray-100 px-4 py-3 text-left font-medium transition-colors hover:bg-red-50 hover:text-red-800"
+                  >
+                    {category}
+                  </a>
+                </li>
+              ))}
             </ul>
           )}
         </div>
