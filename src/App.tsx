@@ -1,5 +1,4 @@
 import NavBar from "./components/NavBar";
-import Product from "./components/Product";
 import FadeInSection from "./components/Fade";
 import hotDog from "./assets/icon.jpeg";
 import Teste from "./components/Teste";
