@@ -6,7 +6,7 @@ import { CATEGORIES } from "../data/menu";
 import { useMenu } from "../context/MenuContext";
 
 function Home() {
-  const { products } = useMenu();
+  const { products, loading, error } = useMenu();
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -23,13 +23,27 @@ function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-12 px-6 py-12">
-        {CATEGORIES.map((category) => (
-          <CategorySection
-            key={category}
-            title={category}
-            products={products.filter((p) => p.category === category)}
-          />
-        ))}
+        {loading ? (
+          <p className="py-16 text-center font-serif text-lg text-red-900/70">
+            Carregando o cardápio...
+          </p>
+        ) : error ? (
+          <p className="py-16 text-center font-serif text-lg text-red-700">
+            {error}
+          </p>
+        ) : products.length === 0 ? (
+          <p className="py-16 text-center font-serif text-lg text-red-900/70">
+            Nenhum produto disponível no momento.
+          </p>
+        ) : (
+          CATEGORIES.map((category) => (
+            <CategorySection
+              key={category}
+              title={category}
+              products={products.filter((p) => p.category === category)}
+            />
+          ))
+        )}
       </main>
 
       <Footer />
