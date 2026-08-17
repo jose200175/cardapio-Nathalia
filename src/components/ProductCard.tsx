@@ -1,6 +1,4 @@
-import { ChevronRight } from "lucide-react";
 import { formatPrice, type Product } from "../data/menu";
-import { whatsappLink } from "../data/contact";
 
 function ProductCard({ product }: { product: Product }) {
   return (
@@ -15,19 +13,10 @@ function ProductCard({ product }: { product: Product }) {
         <p className="mt-1 text-sm text-neutral-600 leading-relaxed">
           {product.description}
         </p>
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3">
           <span className="text-lg font-bold text-red-700">
             {formatPrice(product.price)}
           </span>
-          <a
-            href={whatsappLink()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-full bg-red-800 px-3 py-1.5 text-sm font-medium text-yellow-400 hover:bg-red-900 transition-colors"
-          >
-            Pedir
-            <ChevronRight className="h-4 w-4" />
-          </a>
         </div>
       </div>
     </div>

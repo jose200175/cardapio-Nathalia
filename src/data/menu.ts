@@ -18,6 +18,7 @@ export const CATEGORIES = [
   "Pães",
   "Doces & Bolos",
   "Salgados",
+  "Lanches",
   "Bebidas",
 ] as const;
 
