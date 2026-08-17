@@ -56,10 +56,14 @@ function resizeImage(file: File, maxSize = 600): Promise<string> {
 }
 
 function AdminContent() {
-  const { products, addProduct, updateProduct, removeProduct } = useMenu();
+  const { products, loading, error, addProduct, updateProduct, removeProduct } =
+    useMenu();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -81,7 +85,7 @@ function AdminContent() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const price = Number.parseFloat(form.price.replace(",", "."));
     if (!form.name.trim() || Number.isNaN(price) || price < 0) return;
@@ -94,13 +98,42 @@ function AdminContent() {
       category: form.category,
     };
 
-    if (editingId) {
-      updateProduct({ ...data, id: editingId });
-    } else {
-      addProduct(data);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (editingId) {
+        await updateProduct({ ...data, id: editingId });
+      } else {
+        await addProduct(data);
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+    } catch (err) {
+      setSaveError(
+        err instanceof Error
+          ? `Erro ao salvar: ${err.message}`
+          : "Erro ao salvar o produto.",
+      );
+    } finally {
+      setSaving(false);
     }
-    setForm(emptyForm);
-    setEditingId(null);
+  };
+
+  const handleRemove = async (id: string, name: string) => {
+    if (!window.confirm(`Remover "${name}" do cardápio?`)) return;
+    setDeletingId(id);
+    setSaveError(null);
+    try {
+      await removeProduct(id);
+    } catch (err) {
+      setSaveError(
+        err instanceof Error
+          ? `Erro ao remover: ${err.message}`
+          : "Erro ao remover o produto.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const startEdit = (product: Product) => {
@@ -261,13 +294,18 @@ function AdminContent() {
             </div>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 flex items-center gap-3">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-yellow-400 hover:bg-red-900 transition-colors"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-yellow-400 hover:bg-red-900 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus className="h-4 w-4" />
-              {editingId ? "Salvar alterações" : "Adicionar produto"}
+              {saving
+                ? "Salvando..."
+                : editingId
+                  ? "Salvar alterações"
+                  : "Adicionar produto"}
             </button>
             {editingId && (
               <button
@@ -280,11 +318,24 @@ function AdminContent() {
               </button>
             )}
           </div>
+          {saveError && (
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {saveError}
+            </p>
+          )}
         </form>
 
         <h2 className="mb-4 text-lg font-bold text-red-900">
           Produtos cadastrados ({products.length})
         </h2>
+        {error && (
+          <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {error}
+          </p>
+        )}
+        {loading && (
+          <p className="mb-4 text-sm text-neutral-500">Carregando produtos...</p>
+        )}
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           {products.map((product) => (
             <div
@@ -314,9 +365,10 @@ function AdminContent() {
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => removeProduct(product.id)}
+                  onClick={() => handleRemove(product.id, product.name)}
+                  disabled={deletingId === product.id}
                   aria-label={`Remover ${product.name}`}
-                  className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                  className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
