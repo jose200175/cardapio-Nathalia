@@ -1,60 +1,141 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { INITIAL_PRODUCTS, type Product } from "../data/menu";
-
-const STORAGE_KEY = "panificacao-ideal-produtos";
+import {
+  supabase,
+  isSupabaseConfigured,
+  type ProductRow,
+} from "../lib/supabase";
 
 interface MenuContextValue {
   products: Product[];
-  addProduct: (product: Omit<Product, "id">) => void;
-  updateProduct: (product: Product) => void;
-  removeProduct: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  updateProduct: (product: Product) => Promise<void>;
+  removeProduct: (id: string) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const MenuContext = createContext<MenuContextValue | null>(null);
 
-function loadProducts(): Product[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Product[];
-  } catch {
-    // ignora erros de leitura
-  }
-  return INITIAL_PRODUCTS;
+// Converte a linha do banco para o formato usado na interface.
+function rowToProduct(row: ProductRow): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? "",
+    price: Number(row.price) || 0,
+    image: row.image ?? "",
+    category: row.category,
+  };
 }
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(loadProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      // Sem banco configurado: usa os produtos padrão apenas para exibição.
+      setProducts(INITIAL_PRODUCTS);
+      setError(
+        "Banco de dados não configurado. Exibindo cardápio padrão (as alterações não serão salvas).",
+      );
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    const { data, error: dbError } = await supabase
+      .from("products")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (dbError) {
+      console.log("[v0] Erro ao carregar produtos:", dbError.message);
+      setError("Não foi possível carregar os produtos.");
+      setProducts([]);
+    } else {
+      setProducts((data as ProductRow[]).map(rowToProduct));
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    } catch {
-      // ignora erros de escrita
-    }
-  }, [products]);
+    void refresh();
+  }, [refresh]);
+
+  const addProduct = useCallback(
+    async (product: Omit<Product, "id">) => {
+      const maxOrder = products.reduce(
+        (max, _p, i) => Math.max(max, i + 1),
+        products.length,
+      );
+      const { error: dbError } = await supabase.from("products").insert({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        sort_order: maxOrder + 1,
+      });
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [products, refresh],
+  );
+
+  const updateProduct = useCallback(
+    async (product: Product) => {
+      const { error: dbError } = await supabase
+        .from("products")
+        .update({
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          image: product.image,
+          category: product.category,
+        })
+        .eq("id", product.id);
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const removeProduct = useCallback(
+    async (id: string) => {
+      const { error: dbError } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [refresh],
+  );
 
   const value = useMemo<MenuContextValue>(
     () => ({
       products,
-      addProduct: (product) =>
-        setProducts((prev) => [
-          ...prev,
-          { ...product, id: crypto.randomUUID() },
-        ]),
-      updateProduct: (product) =>
-        setProducts((prev) =>
-          prev.map((p) => (p.id === product.id ? product : p)),
-        ),
-      removeProduct: (id) =>
-        setProducts((prev) => prev.filter((p) => p.id !== id)),
+      loading,
+      error,
+      addProduct,
+      updateProduct,
+      removeProduct,
+      refresh,
     }),
-    [products],
+    [products, loading, error, addProduct, updateProduct, removeProduct, refresh],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;
