@@ -79,8 +79,7 @@ function AdminContent() {
     }
   }, [categories, editingId, form.category]);
 
-  const handleAddCategory = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleAddCategory = async () => {
     setCategoryError(null);
     try {
       await addCategory(newCategory);
@@ -241,22 +240,29 @@ function AdminContent() {
                   </option>
                 ))}
               </select>
-              <form onSubmit={handleAddCategory} className="mt-2 flex gap-2">
+              <div className="mt-2 flex gap-2">
                 <input
                   className={inputClass}
                   value={newCategory}
                   onChange={(event) => setNewCategory(event.target.value)}
                   placeholder="Nova categoria"
                   aria-label="Nome da nova categoria"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleAddCategory();
+                    }
+                  }}
                 />
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => void handleAddCategory()}
                   className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-yellow-500 px-3 py-2 text-sm font-semibold text-red-950 hover:bg-yellow-400"
                 >
                   <Plus className="h-4 w-4" />
                   Criar
                 </button>
-              </form>
+              </div>
               {categoryError && (
                 <p className="mt-1 text-xs text-red-600">{categoryError}</p>
               )}
