@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
-import { CATEGORIES } from "../data/menu";
+import { useMenu } from "../context/MenuContext";
 import { slugify } from "./CategorySection";
 
 function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { categories } = useMenu();
 
   // Fecha o menu se o usuário clicar fora dele
   useEffect(() => {
@@ -45,7 +46,7 @@ function NavBar() {
 
           {isMenuOpen && (
             <ul className="animate-in fade-in zoom-in-95 absolute right-0 z-50 mt-2 w-52 rounded-md border border-gray-200 bg-white py-1 text-gray-800 shadow-2xl duration-100">
-              {CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <li key={category}>
                   <a
                     href={`#${slugify(category)}`}

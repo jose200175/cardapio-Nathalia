@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { INITIAL_PRODUCTS, type Product } from "../data/menu";
+import { CATEGORIES, INITIAL_PRODUCTS, type Product } from "../data/menu";
 import {
   supabase,
   isSupabaseConfigured,
@@ -15,8 +15,10 @@ import {
 
 interface MenuContextValue {
   products: Product[];
+  categories: string[];
   loading: boolean;
   error: string | null;
+  addCategory: (name: string) => Promise<void>;
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
@@ -39,6 +41,7 @@ function rowToProduct(row: ProductRow): Product {
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +49,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) {
       // Sem banco configurado: usa os produtos padrão apenas para exibição.
       setProducts(INITIAL_PRODUCTS);
+      setCategories([...CATEGORIES]);
       setError(
         "Banco de dados não configurado. Exibindo cardápio padrão (as alterações não serão salvas).",
       );
@@ -55,6 +59,16 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     setError(null);
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("categories")
+      .select("name")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (categoryError) {
+      console.log("[v0] Erro ao carregar categorias:", categoryError.message);
+    } else {
+      setCategories(categoryData.map((category) => category.name));
+    }
     const { data, error: dbError } = await supabase
       .from("products")
       .select("*")
@@ -74,6 +88,20 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const addCategory = useCallback(
+    async (name: string) => {
+      const normalized = name.trim();
+      if (!normalized) throw new Error("Informe o nome da categoria.");
+      const { error: dbError } = await supabase.from("categories").insert({
+        name: normalized,
+        sort_order: categories.length + 1,
+      });
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [categories.length, refresh],
+  );
 
   const addProduct = useCallback(
     async (product: Omit<Product, "id">) => {
@@ -128,14 +156,16 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<MenuContextValue>(
     () => ({
       products,
+      categories,
       loading,
+      addCategory,
       error,
       addProduct,
       updateProduct,
       removeProduct,
       refresh,
     }),
-    [products, loading, error, addProduct, updateProduct, removeProduct, refresh],
+    [products, categories, loading, error, addCategory, addProduct, updateProduct, removeProduct, refresh],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;

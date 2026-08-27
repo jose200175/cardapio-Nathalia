@@ -2,11 +2,10 @@ import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import WhatsAppButton from "../components/WhatsAppButton";
 import CategorySection from "../components/CategorySection";
-import { CATEGORIES } from "../data/menu";
 import { useMenu } from "../context/MenuContext";
 
 function Home() {
-  const { products, loading, error } = useMenu();
+  const { products, categories, loading, error } = useMenu();
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -36,7 +35,7 @@ function Home() {
             Nenhum produto disponível no momento.
           </p>
         ) : (
-          CATEGORIES.map((category) => (
+          categories.map((category) => (
             <CategorySection
               key={category}
               title={category}
