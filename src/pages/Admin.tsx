@@ -1,10 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Pencil, X, Upload } from "lucide-react";
 import {
-  CATEGORIES,
   formatPrice,
-  type Category,
   type Product,
 } from "../data/menu";
 import { useMenu } from "../context/MenuContext";
@@ -15,7 +13,7 @@ interface FormState {
   description: string;
   price: string;
   image: string;
-  category: Category;
+  category: string;
 }
 
 const emptyForm: FormState = {
@@ -23,7 +21,7 @@ const emptyForm: FormState = {
   description: "",
   price: "",
   image: "",
-  category: CATEGORIES[0],
+  category: "",
 };
 
 // Redimensiona e comprime a imagem para não estourar o armazenamento do navegador
@@ -56,14 +54,43 @@ function resizeImage(file: File, maxSize = 600): Promise<string> {
 }
 
 function AdminContent() {
-  const { products, loading, error, addProduct, updateProduct, removeProduct } =
-    useMenu();
+  const {
+    products,
+    categories,
+    loading,
+    error,
+    addCategory,
+    addProduct,
+    updateProduct,
+    removeProduct,
+  } = useMenu();
+  const [newCategory, setNewCategory] = useState("");
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editingId && !form.category && categories.length > 0) {
+      setForm((current) => ({ ...current, category: categories[0] }));
+    }
+  }, [categories, editingId, form.category]);
+
+  const handleAddCategory = async () => {
+    setCategoryError(null);
+    try {
+      await addCategory(newCategory);
+      setForm((current) => ({ ...current, category: newCategory.trim() }));
+      setNewCategory("");
+    } catch (err) {
+      setCategoryError(
+        err instanceof Error ? err.message : "Erro ao criar categoria.",
+      );
+    }
+  };
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -106,7 +133,7 @@ function AdminContent() {
       } else {
         await addProduct(data);
       }
-      setForm(emptyForm);
+      setForm({ ...emptyForm, category: data.category });
       setEditingId(null);
     } catch (err) {
       setSaveError(
@@ -143,7 +170,7 @@ function AdminContent() {
       description: product.description,
       price: String(product.price),
       image: product.image,
-      category: product.category as Category,
+      category: product.category,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -204,15 +231,41 @@ function AdminContent() {
                 className={inputClass}
                 value={form.category}
                 onChange={(e) =>
-                  setForm({ ...form, category: e.target.value as Category })
+                  setForm({ ...form, category: e.target.value })
                 }
               >
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
               </select>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className={inputClass}
+                  value={newCategory}
+                  onChange={(event) => setNewCategory(event.target.value)}
+                  placeholder="Nova categoria"
+                  aria-label="Nome da nova categoria"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleAddCategory();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleAddCategory()}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-yellow-500 px-3 py-2 text-sm font-semibold text-red-950 hover:bg-yellow-400"
+                >
+                  <Plus className="h-4 w-4" />
+                  Criar
+                </button>
+              </div>
+              {categoryError && (
+                <p className="mt-1 text-xs text-red-600">{categoryError}</p>
+              )}
             </div>
 
             <div>
