@@ -370,19 +370,6 @@ function AdminContent() {
                 onChange={(e) => setForm({ ...form, image: e.target.value })}
                 placeholder="Ou cole um link direto da imagem (https://...)"
               />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <select className={inputClass} value={form.imageFit} onChange={(e) => setForm({ ...form, imageFit: e.target.value as "cover" | "contain" })} aria-label="Enquadramento da imagem">
-                  <option value="cover">Preencher quadro</option>
-                  <option value="contain">Mostrar imagem inteira</option>
-                </select>
-                <select className={inputClass} value={form.imagePosition} onChange={(e) => setForm({ ...form, imagePosition: e.target.value })} aria-label="Posição da imagem">
-                  <option value="center">Centro</option>
-                  <option value="top">Topo</option>
-                  <option value="bottom">Base</option>
-                  <option value="left">Esquerda</option>
-                  <option value="right">Direita</option>
-                </select>
-              </div>
             </div>
 
             <div className="md:col-span-2">
