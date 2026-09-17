@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Pencil, X, Upload, ArrowUp, ArrowDown } from "lucide-react";
 import {
@@ -28,32 +29,29 @@ const emptyForm: FormState = {
   category: "",
 };
 
-// Redimensiona e comprime a imagem para não estourar o armazenamento do navegador
-function resizeImage(file: File, maxSize = 600): Promise<string> {
+function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const width = Math.round(img.width * scale);
-        const height = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Não foi possível processar a imagem."));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.8));
-      };
-      img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
-      img.src = reader.result as string;
-    };
+    reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(new Error("Falha ao ler o arquivo."));
     reader.readAsDataURL(file);
+  });
+}
+
+function getCroppedImage(source: string, area: Area): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = area.width;
+      canvas.height = area.height;
+      const context = canvas.getContext("2d");
+      if (!context) return reject(new Error("Não foi possível processar a imagem."));
+      context.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, area.width, area.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    image.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+    image.src = source;
   });
 }
 
@@ -79,6 +77,11 @@ function AdminContent() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [cropArea, setCropArea] = useState<Area | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
 
   useEffect(() => {
     if (!editingId && !form.category && categories.length > 0) {
@@ -119,14 +122,31 @@ function AdminContent() {
       return;
     }
     try {
-      const dataUrl = await resizeImage(file);
-      setForm((prev) => ({ ...prev, image: dataUrl }));
+      const dataUrl = await readImage(file);
+      setCropSource(dataUrl);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropArea(null);
     } catch (err) {
       setUploadError(
         err instanceof Error ? err.message : "Erro ao carregar a imagem.",
       );
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const confirmCrop = async () => {
+    if (!cropSource || !cropArea) return;
+    setIsCropping(true);
+    try {
+      const image = await getCroppedImage(cropSource, cropArea);
+      setForm((prev) => ({ ...prev, image, imageFit: "cover", imagePosition: "center" }));
+      setCropSource(null);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Não foi possível recortar a imagem.");
+    } finally {
+      setIsCropping(false);
     }
   };
 
@@ -411,6 +431,25 @@ function AdminContent() {
             </p>
           )}
         </form>
+
+        {cropSource && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+            <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
+                <div><h2 id="crop-title" className="font-serif text-xl font-bold text-red-900">Ajustar foto</h2><p className="text-sm text-neutral-500">Arraste a imagem e use o zoom para enquadrar.</p></div>
+                <button type="button" onClick={() => setCropSource(null)} className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100" aria-label="Fechar editor"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="relative h-[min(58vh,420px)] bg-neutral-950">
+                <Cropper image={cropSource} crop={crop} zoom={zoom} aspect={1} cropShape="rect" showGrid onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, pixels) => setCropArea(pixels)} />
+              </div>
+              <div className="px-5 py-4"><label className="flex flex-col gap-2 text-sm font-medium text-neutral-700">Zoom<input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} aria-label="Zoom da imagem" /></label></div>
+              <div className="flex justify-end gap-3 border-t border-neutral-200 px-5 py-4">
+                <button type="button" onClick={() => setCropSource(null)} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">Cancelar</button>
+                <button type="button" onClick={() => void confirmCrop()} disabled={isCropping || !cropArea} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-60">{isCropping ? "Processando..." : "Usar esta foto"}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-end justify-between gap-4">
