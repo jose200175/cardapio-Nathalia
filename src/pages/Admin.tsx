@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Pencil, X, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, X, Upload, ArrowUp, ArrowDown } from "lucide-react";
 import {
   formatPrice,
   type Product,
@@ -13,6 +13,8 @@ interface FormState {
   description: string;
   price: string;
   image: string;
+  imageFit: "cover" | "contain";
+  imagePosition: string;
   category: string;
 }
 
@@ -21,6 +23,8 @@ const emptyForm: FormState = {
   description: "",
   price: "",
   image: "",
+  imageFit: "cover",
+  imagePosition: "center",
   category: "",
 };
 
@@ -63,6 +67,9 @@ function AdminContent() {
     addProduct,
     updateProduct,
     removeProduct,
+    moveProduct,
+    removeCategory,
+    moveCategory,
   } = useMenu();
   const [newCategory, setNewCategory] = useState("");
   const [categoryError, setCategoryError] = useState<string | null>(null);
@@ -122,6 +129,8 @@ function AdminContent() {
       description: form.description.trim(),
       price,
       image: form.image.trim(),
+      imageFit: form.imageFit,
+      imagePosition: form.imagePosition,
       category: form.category,
     };
 
@@ -170,6 +179,8 @@ function AdminContent() {
       description: product.description,
       price: String(product.price),
       image: product.image,
+      imageFit: product.imageFit ?? "cover",
+      imagePosition: product.imagePosition ?? "center",
       category: product.category,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -227,12 +238,11 @@ function AdminContent() {
               <label className="mb-1 block text-sm font-medium text-neutral-700">
                 Categoria
               </label>
+              <div className="flex gap-2">
               <select
                 className={inputClass}
                 value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
                 {categories.map((c) => (
                   <option key={c} value={c}>
@@ -240,6 +250,12 @@ function AdminContent() {
                   </option>
                 ))}
               </select>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" onClick={() => void moveCategory(form.category, "up")} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Mover categoria para cima"><ArrowUp className="h-4 w-4" /></button>
+                <button type="button" onClick={() => void moveCategory(form.category, "down")} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Mover categoria para baixo"><ArrowDown className="h-4 w-4" /></button>
+                <button type="button" onClick={() => { if (window.confirm(`Excluir a categoria ${form.category}?`)) void removeCategory(form.category); }} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Excluir categoria"><Trash2 className="h-4 w-4" /></button>
+              </div>
+              </div>
               <div className="mt-2 flex gap-2">
                 <input
                   className={inputClass}
@@ -291,7 +307,8 @@ function AdminContent() {
                   <img
                     src={form.image || "/placeholder.svg"}
                     alt="Pré-visualização"
-                    className="h-16 w-16 flex-shrink-0 rounded-lg border border-neutral-200 object-cover"
+                    className="h-16 w-16 flex-shrink-0 rounded-lg border border-neutral-200"
+                    style={{ objectFit: form.imageFit, objectPosition: form.imagePosition }}
                   />
                 ) : (
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 text-neutral-400">
@@ -329,6 +346,19 @@ function AdminContent() {
                 onChange={(e) => setForm({ ...form, image: e.target.value })}
                 placeholder="Ou cole um link direto da imagem (https://...)"
               />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <select className={inputClass} value={form.imageFit} onChange={(e) => setForm({ ...form, imageFit: e.target.value as "cover" | "contain" })} aria-label="Enquadramento da imagem">
+                  <option value="cover">Preencher quadro</option>
+                  <option value="contain">Mostrar imagem inteira</option>
+                </select>
+                <select className={inputClass} value={form.imagePosition} onChange={(e) => setForm({ ...form, imagePosition: e.target.value })} aria-label="Posição da imagem">
+                  <option value="center">Centro</option>
+                  <option value="top">Topo</option>
+                  <option value="bottom">Base</option>
+                  <option value="left">Esquerda</option>
+                  <option value="right">Direita</option>
+                </select>
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -398,7 +428,8 @@ function AdminContent() {
               <img
                 src={product.image || "/placeholder.svg"}
                 alt={product.name}
-                className="h-14 w-14 flex-shrink-0 rounded-lg object-cover"
+                className="h-14 w-14 flex-shrink-0 rounded-lg"
+                style={{ objectFit: product.imageFit ?? "cover", objectPosition: product.imagePosition ?? "center" }}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-neutral-800">
@@ -409,7 +440,9 @@ function AdminContent() {
               <span className="font-semibold text-red-700">
                 {formatPrice(product.price)}
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
+                <button type="button" onClick={() => void moveProduct(product.id, "up")} aria-label={`Mover ${product.name} para cima`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700"><ArrowUp className="h-4 w-4" /></button>
+                <button type="button" onClick={() => void moveProduct(product.id, "down")} aria-label={`Mover ${product.name} para baixo`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700"><ArrowDown className="h-4 w-4" /></button>
                 <button
                   onClick={() => startEdit(product)}
                   aria-label={`Editar ${product.name}`}

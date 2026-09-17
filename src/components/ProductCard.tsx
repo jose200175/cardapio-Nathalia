@@ -6,7 +6,8 @@ function ProductCard({ product }: { product: Product }) {
       <img
         src={product.image || "/placeholder.svg"}
         alt={product.name}
-        className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
+        className="h-24 w-24 flex-shrink-0 rounded-xl"
+        style={{ objectFit: product.imageFit ?? "cover", objectPosition: product.imagePosition ?? "center" }}
       />
       <div className="flex flex-1 flex-col">
         <h3 className="text-lg font-bold text-red-900">{product.name}</h3>
