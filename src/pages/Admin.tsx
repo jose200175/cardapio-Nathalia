@@ -99,6 +99,17 @@ function AdminContent() {
     }
   };
 
+  const handleCategoryAction = async (action: () => Promise<void>) => {
+    setCategoryError(null);
+    try {
+      await action();
+    } catch (err) {
+      setCategoryError(
+        err instanceof Error ? err.message : "Não foi possível atualizar as categorias.",
+      );
+    }
+  };
+
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -238,7 +249,6 @@ function AdminContent() {
               <label className="mb-1 block text-sm font-medium text-neutral-700">
                 Categoria
               </label>
-              <div className="flex gap-2">
               <select
                 className={inputClass}
                 value={form.category}
@@ -250,12 +260,6 @@ function AdminContent() {
                   </option>
                 ))}
               </select>
-              <div className="flex shrink-0 gap-1">
-                <button type="button" onClick={() => void moveCategory(form.category, "up")} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Mover categoria para cima"><ArrowUp className="h-4 w-4" /></button>
-                <button type="button" onClick={() => void moveCategory(form.category, "down")} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Mover categoria para baixo"><ArrowDown className="h-4 w-4" /></button>
-                <button type="button" onClick={() => { if (window.confirm(`Excluir a categoria ${form.category}?`)) void removeCategory(form.category); }} className="rounded border p-2 text-neutral-500 hover:text-red-700" aria-label="Excluir categoria"><Trash2 className="h-4 w-4" /></button>
-              </div>
-              </div>
               <div className="mt-2 flex gap-2">
                 <input
                   className={inputClass}
@@ -408,6 +412,72 @@ function AdminContent() {
           )}
         </form>
 
+        <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-red-900">Organização das categorias</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                A ordem abaixo é a mesma exibida no cardápio para os clientes.
+              </p>
+            </div>
+            <span className="hidden text-xs font-medium uppercase tracking-wide text-neutral-400 sm:block">
+              Arraste pela ordem usando as setas
+            </span>
+          </div>
+          <div className="space-y-2">
+            {categories.map((category, index) => (
+              <div
+                key={category}
+                className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-800">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold text-neutral-800">
+                  {category}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => void handleCategoryAction(() => moveCategory(category, "up"))}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`Mover ${category} para cima`}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === categories.length - 1}
+                    onClick={() => void handleCategoryAction(() => moveCategory(category, "down"))}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`Mover ${category} para baixo`}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Excluir a categoria ${category}?`)) {
+                        void handleCategoryAction(() => removeCategory(category));
+                      }
+                    }}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700"
+                    aria-label={`Excluir categoria ${category}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {categoryError && (
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {categoryError}
+            </p>
+          )}
+        </section>
+
         <h2 className="mb-4 text-lg font-bold text-red-900">
           Produtos cadastrados ({products.length})
         </h2>
@@ -419,52 +489,56 @@ function AdminContent() {
         {loading && (
           <p className="mb-4 text-sm text-neutral-500">Carregando produtos...</p>
         )}
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="flex items-center gap-4 border-b border-neutral-100 p-4 last:border-b-0"
-            >
-              <img
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                className="h-14 w-14 flex-shrink-0 rounded-lg"
-                style={{ objectFit: product.imageFit ?? "cover", objectPosition: product.imagePosition ?? "center" }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-neutral-800">
-                  {product.name}
-                </p>
-                <p className="text-xs text-neutral-500">{product.category}</p>
-              </div>
-              <span className="font-semibold text-red-700">
-                {formatPrice(product.price)}
-              </span>
-              <div className="flex gap-1">
-                <button type="button" onClick={() => void moveProduct(product.id, "up")} aria-label={`Mover ${product.name} para cima`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700"><ArrowUp className="h-4 w-4" /></button>
-                <button type="button" onClick={() => void moveProduct(product.id, "down")} aria-label={`Mover ${product.name} para baixo`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700"><ArrowDown className="h-4 w-4" /></button>
-                <button
-                  onClick={() => startEdit(product)}
-                  aria-label={`Editar ${product.name}`}
-                  className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 transition-colors"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleRemove(product.id, product.name)}
-                  disabled={deletingId === product.id}
-                  aria-label={`Remover ${product.name}`}
-                  className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="space-y-5">
+          {categories.map((category) => {
+            const categoryProducts = products
+              .filter((product) => product.category === category)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+            if (categoryProducts.length === 0) return null;
+
+            return (
+              <section key={category} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-3">
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-red-900">{category}</h3>
+                    <p className="text-xs text-red-900/60">
+                      {categoryProducts.length} {categoryProducts.length === 1 ? "produto" : "produtos"}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-neutral-500">Ordem do cardápio</span>
+                </div>
+                <div>
+                  {categoryProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center gap-3 border-b border-neutral-100 p-4 last:border-b-0 sm:gap-4">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500">
+                        {index + 1}
+                      </span>
+                      <img
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        className="h-14 w-14 flex-shrink-0 rounded-lg"
+                        style={{ objectFit: product.imageFit ?? "cover", objectPosition: product.imagePosition ?? "center" }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-neutral-800">{product.name}</p>
+                        <p className="truncate text-xs text-neutral-500">{product.description}</p>
+                      </div>
+                      <span className="hidden font-semibold text-red-700 sm:block">{formatPrice(product.price)}</span>
+                      <div className="flex gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => void moveProduct(product.id, "up")} aria-label={`Mover ${product.name} para cima`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
+                        <button type="button" disabled={index === categoryProducts.length - 1} onClick={() => void moveProduct(product.id, "down")} aria-label={`Mover ${product.name} para baixo`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => startEdit(product)} aria-label={`Editar ${product.name}`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 transition-colors"><Pencil className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => handleRemove(product.id, product.name)} disabled={deletingId === product.id} aria-label={`Remover ${product.name}`} className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
           {products.length === 0 && (
-            <p className="p-6 text-center text-sm text-neutral-500">
-              Nenhum produto cadastrado ainda.
-            </p>
+            <div className="rounded-2xl bg-white p-6 text-center text-sm text-neutral-500 shadow-sm">Nenhum produto cadastrado ainda.</div>
           )}
         </div>
       </main>
