@@ -127,10 +127,15 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       if (index < 0 || target < 0 || target >= categories.length) return;
       const reordered = [...categories];
       [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-      const { error: dbError } = await supabase.from("categories").upsert(
-        reordered.map((category, sort_order) => ({ name: category, sort_order })),
-        { onConflict: "name" },
+      const results = await Promise.all(
+        reordered.map((category, sort_order) =>
+          supabase
+            .from("categories")
+            .update({ sort_order })
+            .eq("name", category),
+        ),
       );
+      const dbError = results.find((result) => result.error)?.error;
       if (dbError) throw new Error(dbError.message);
       await refresh();
     },
