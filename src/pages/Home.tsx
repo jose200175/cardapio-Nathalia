@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import WhatsAppButton from "../components/WhatsAppButton";
@@ -6,6 +7,10 @@ import { useMenu } from "../context/MenuContext";
 
 function Home() {
   const { products, categories, loading, error } = useMenu();
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => products.some((product) => product.category === category)),
+    [categories, products],
+  );
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -35,7 +40,7 @@ function Home() {
             Nenhum produto disponível no momento.
           </p>
         ) : (
-          categories.map((category) => (
+          visibleCategories.map((category) => (
             <CategorySection
               key={category}
               title={category}
