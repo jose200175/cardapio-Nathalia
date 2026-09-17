@@ -26,5 +26,7 @@ export interface ProductRow {
   image: string;
   category: string;
   sort_order: number;
+  image_fit: "cover" | "contain";
+  image_position: string;
   created_at?: string;
 }

@@ -11,7 +11,10 @@ export interface Product {
   description: string;
   price: number;
   image: string;
+  imageFit?: "cover" | "contain";
+  imagePosition?: string;
   category: string;
+  sortOrder?: number;
 }
 
 export const CATEGORIES = [

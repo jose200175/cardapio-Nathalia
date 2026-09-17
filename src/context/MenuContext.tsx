@@ -19,9 +19,12 @@ interface MenuContextValue {
   loading: boolean;
   error: string | null;
   addCategory: (name: string) => Promise<void>;
+  removeCategory: (name: string) => Promise<void>;
+  moveCategory: (name: string, direction: "up" | "down") => Promise<void>;
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
+  moveProduct: (id: string, direction: "up" | "down") => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -35,7 +38,10 @@ function rowToProduct(row: ProductRow): Product {
     description: row.description ?? "",
     price: Number(row.price) || 0,
     image: row.image ?? "",
+    imageFit: row.image_fit ?? "cover",
+    imagePosition: row.image_position ?? "center",
     category: row.category,
+    sortOrder: row.sort_order,
   };
 }
 
@@ -103,6 +109,39 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     [categories.length, refresh],
   );
 
+  const removeCategory = useCallback(
+    async (name: string) => {
+      const hasProducts = products.some((product) => product.category === name);
+      if (hasProducts) throw new Error("Remova ou mova os produtos desta categoria antes.");
+      const { error: dbError } = await supabase.from("categories").delete().eq("name", name);
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [products, refresh],
+  );
+
+  const moveCategory = useCallback(
+    async (name: string, direction: "up" | "down") => {
+      const index = categories.indexOf(name);
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || target < 0 || target >= categories.length) return;
+      const reordered = [...categories];
+      [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+      const results = await Promise.all(
+        reordered.map((category, sort_order) =>
+          supabase
+            .from("categories")
+            .update({ sort_order })
+            .eq("name", category),
+        ),
+      );
+      const dbError = results.find((result) => result.error)?.error;
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [categories, refresh],
+  );
+
   const addProduct = useCallback(
     async (product: Omit<Product, "id">) => {
       const maxOrder = products.reduce(
@@ -115,6 +154,8 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
         price: product.price,
         image: product.image,
         category: product.category,
+        image_fit: product.imageFit ?? "cover",
+        image_position: product.imagePosition ?? "center",
         sort_order: maxOrder + 1,
       });
       if (dbError) throw new Error(dbError.message);
@@ -133,12 +174,35 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
           price: product.price,
           image: product.image,
           category: product.category,
+          image_fit: product.imageFit ?? "cover",
+          image_position: product.imagePosition ?? "center",
         })
         .eq("id", product.id);
       if (dbError) throw new Error(dbError.message);
       await refresh();
     },
     [refresh],
+  );
+
+  const moveProduct = useCallback(
+    async (id: string, direction: "up" | "down") => {
+      const product = products.find((item) => item.id === id);
+      if (!product) return;
+      const siblings = products.filter((item) => item.category === product.category);
+      const index = siblings.findIndex((item) => item.id === id);
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= siblings.length) return;
+      const reordered = [...siblings];
+      [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+      const updates = reordered.map((item, sort_order) =>
+        supabase.from("products").update({ sort_order }).eq("id", item.id),
+      );
+      const results = await Promise.all(updates);
+      const dbError = results.find((result) => result.error)?.error;
+      if (dbError) throw new Error(dbError.message);
+      await refresh();
+    },
+    [products, refresh],
   );
 
   const removeProduct = useCallback(
@@ -159,13 +223,16 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       categories,
       loading,
       addCategory,
+      removeCategory,
+      moveCategory,
       error,
       addProduct,
       updateProduct,
       removeProduct,
+      moveProduct,
       refresh,
     }),
-    [products, categories, loading, error, addCategory, addProduct, updateProduct, removeProduct, refresh],
+    [products, categories, loading, error, addCategory, removeCategory, moveCategory, addProduct, updateProduct, removeProduct, moveProduct, refresh],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Pencil, X, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, X, Upload, ArrowUp, ArrowDown } from "lucide-react";
 import {
   formatPrice,
   type Product,
@@ -13,6 +14,8 @@ interface FormState {
   description: string;
   price: string;
   image: string;
+  imageFit: "cover" | "contain";
+  imagePosition: string;
   category: string;
 }
 
@@ -21,35 +24,34 @@ const emptyForm: FormState = {
   description: "",
   price: "",
   image: "",
+  imageFit: "cover",
+  imagePosition: "center",
   category: "",
 };
 
-// Redimensiona e comprime a imagem para não estourar o armazenamento do navegador
-function resizeImage(file: File, maxSize = 600): Promise<string> {
+function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const width = Math.round(img.width * scale);
-        const height = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Não foi possível processar a imagem."));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.8));
-      };
-      img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
-      img.src = reader.result as string;
-    };
+    reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(new Error("Falha ao ler o arquivo."));
     reader.readAsDataURL(file);
+  });
+}
+
+function getCroppedImage(source: string, area: Area): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = area.width;
+      canvas.height = area.height;
+      const context = canvas.getContext("2d");
+      if (!context) return reject(new Error("Não foi possível processar a imagem."));
+      context.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, area.width, area.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    image.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+    image.src = source;
   });
 }
 
@@ -63,6 +65,9 @@ function AdminContent() {
     addProduct,
     updateProduct,
     removeProduct,
+    moveProduct,
+    removeCategory,
+    moveCategory,
   } = useMenu();
   const [newCategory, setNewCategory] = useState("");
   const [categoryError, setCategoryError] = useState<string | null>(null);
@@ -72,6 +77,11 @@ function AdminContent() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [cropArea, setCropArea] = useState<Area | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
 
   useEffect(() => {
     if (!editingId && !form.category && categories.length > 0) {
@@ -92,6 +102,17 @@ function AdminContent() {
     }
   };
 
+  const handleCategoryAction = async (action: () => Promise<void>) => {
+    setCategoryError(null);
+    try {
+      await action();
+    } catch (err) {
+      setCategoryError(
+        err instanceof Error ? err.message : "Não foi possível atualizar as categorias.",
+      );
+    }
+  };
+
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -101,14 +122,31 @@ function AdminContent() {
       return;
     }
     try {
-      const dataUrl = await resizeImage(file);
-      setForm((prev) => ({ ...prev, image: dataUrl }));
+      const dataUrl = await readImage(file);
+      setCropSource(dataUrl);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropArea(null);
     } catch (err) {
       setUploadError(
         err instanceof Error ? err.message : "Erro ao carregar a imagem.",
       );
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const confirmCrop = async () => {
+    if (!cropSource || !cropArea) return;
+    setIsCropping(true);
+    try {
+      const image = await getCroppedImage(cropSource, cropArea);
+      setForm((prev) => ({ ...prev, image, imageFit: "cover", imagePosition: "center" }));
+      setCropSource(null);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Não foi possível recortar a imagem.");
+    } finally {
+      setIsCropping(false);
     }
   };
 
@@ -122,6 +160,8 @@ function AdminContent() {
       description: form.description.trim(),
       price,
       image: form.image.trim(),
+      imageFit: form.imageFit,
+      imagePosition: form.imagePosition,
       category: form.category,
     };
 
@@ -170,6 +210,8 @@ function AdminContent() {
       description: product.description,
       price: String(product.price),
       image: product.image,
+      imageFit: product.imageFit ?? "cover",
+      imagePosition: product.imagePosition ?? "center",
       category: product.category,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -230,9 +272,7 @@ function AdminContent() {
               <select
                 className={inputClass}
                 value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
                 {categories.map((c) => (
                   <option key={c} value={c}>
@@ -291,7 +331,8 @@ function AdminContent() {
                   <img
                     src={form.image || "/placeholder.svg"}
                     alt="Pré-visualização"
-                    className="h-16 w-16 flex-shrink-0 rounded-lg border border-neutral-200 object-cover"
+                    className="h-16 w-16 flex-shrink-0 rounded-lg border border-neutral-200"
+                    style={{ objectFit: form.imageFit, objectPosition: form.imagePosition }}
                   />
                 ) : (
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 text-neutral-400">
@@ -378,6 +419,91 @@ function AdminContent() {
           )}
         </form>
 
+        {cropSource && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+            <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
+                <div><h2 id="crop-title" className="font-serif text-xl font-bold text-red-900">Ajustar foto</h2><p className="text-sm text-neutral-500">Arraste a imagem e use o zoom para enquadrar.</p></div>
+                <button type="button" onClick={() => setCropSource(null)} className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100" aria-label="Fechar editor"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="relative h-[min(58vh,420px)] bg-neutral-950">
+                <Cropper image={cropSource} crop={crop} zoom={zoom} aspect={1} cropShape="rect" showGrid onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, pixels) => setCropArea(pixels)} />
+              </div>
+              <div className="px-5 py-4"><label className="flex flex-col gap-2 text-sm font-medium text-neutral-700">Zoom<input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} aria-label="Zoom da imagem" /></label></div>
+              <div className="flex justify-end gap-3 border-t border-neutral-200 px-5 py-4">
+                <button type="button" onClick={() => setCropSource(null)} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">Cancelar</button>
+                <button type="button" onClick={() => void confirmCrop()} disabled={isCropping || !cropArea} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-60">{isCropping ? "Processando..." : "Usar esta foto"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-red-900">Organização das categorias</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                A ordem abaixo é a mesma exibida no cardápio para os clientes.
+              </p>
+            </div>
+            <span className="hidden text-xs font-medium uppercase tracking-wide text-neutral-400 sm:block">
+              Arraste pela ordem usando as setas
+            </span>
+          </div>
+          <div className="space-y-2">
+            {categories.map((category, index) => (
+              <div
+                key={category}
+                className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-800">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold text-neutral-800">
+                  {category}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => void handleCategoryAction(() => moveCategory(category, "up"))}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`Mover ${category} para cima`}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === categories.length - 1}
+                    onClick={() => void handleCategoryAction(() => moveCategory(category, "down"))}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`Mover ${category} para baixo`}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Excluir a categoria ${category}?`)) {
+                        void handleCategoryAction(() => removeCategory(category));
+                      }
+                    }}
+                    className="rounded-lg border border-neutral-200 bg-white p-2 text-neutral-500 transition-colors hover:border-red-200 hover:text-red-700"
+                    aria-label={`Excluir categoria ${category}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {categoryError && (
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {categoryError}
+            </p>
+          )}
+        </section>
+
         <h2 className="mb-4 text-lg font-bold text-red-900">
           Produtos cadastrados ({products.length})
         </h2>
@@ -389,49 +515,56 @@ function AdminContent() {
         {loading && (
           <p className="mb-4 text-sm text-neutral-500">Carregando produtos...</p>
         )}
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="flex items-center gap-4 border-b border-neutral-100 p-4 last:border-b-0"
-            >
-              <img
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                className="h-14 w-14 flex-shrink-0 rounded-lg object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-neutral-800">
-                  {product.name}
-                </p>
-                <p className="text-xs text-neutral-500">{product.category}</p>
-              </div>
-              <span className="font-semibold text-red-700">
-                {formatPrice(product.price)}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => startEdit(product)}
-                  aria-label={`Editar ${product.name}`}
-                  className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 transition-colors"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleRemove(product.id, product.name)}
-                  disabled={deletingId === product.id}
-                  aria-label={`Remover ${product.name}`}
-                  className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="space-y-5">
+          {categories.map((category) => {
+            const categoryProducts = products
+              .filter((product) => product.category === category)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+            if (categoryProducts.length === 0) return null;
+
+            return (
+              <section key={category} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-3">
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-red-900">{category}</h3>
+                    <p className="text-xs text-red-900/60">
+                      {categoryProducts.length} {categoryProducts.length === 1 ? "produto" : "produtos"}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-neutral-500">Ordem do cardápio</span>
+                </div>
+                <div>
+                  {categoryProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center gap-3 border-b border-neutral-100 p-4 last:border-b-0 sm:gap-4">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500">
+                        {index + 1}
+                      </span>
+                      <img
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        className="h-14 w-14 flex-shrink-0 rounded-lg"
+                        style={{ objectFit: product.imageFit ?? "cover", objectPosition: product.imagePosition ?? "center" }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-neutral-800">{product.name}</p>
+                        <p className="truncate text-xs text-neutral-500">{product.description}</p>
+                      </div>
+                      <span className="hidden font-semibold text-red-700 sm:block">{formatPrice(product.price)}</span>
+                      <div className="flex gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => void moveProduct(product.id, "up")} aria-label={`Mover ${product.name} para cima`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
+                        <button type="button" disabled={index === categoryProducts.length - 1} onClick={() => void moveProduct(product.id, "down")} aria-label={`Mover ${product.name} para baixo`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => startEdit(product)} aria-label={`Editar ${product.name}`} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-red-700 transition-colors"><Pencil className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => handleRemove(product.id, product.name)} disabled={deletingId === product.id} aria-label={`Remover ${product.name}`} className="rounded-md p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
           {products.length === 0 && (
-            <p className="p-6 text-center text-sm text-neutral-500">
-              Nenhum produto cadastrado ainda.
-            </p>
+            <div className="rounded-2xl bg-white p-6 text-center text-sm text-neutral-500 shadow-sm">Nenhum produto cadastrado ainda.</div>
           )}
         </div>
       </main>
